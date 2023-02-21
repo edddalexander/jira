@@ -2,13 +2,18 @@ import com.atlassian.jira.issue.status.Status
 import com.atlassian.jira.issue.changehistory.ChangeHistoryManager
 import com.atlassian.jira.workflow.JiraWorkflow
 import com.opensymphony.workflow.InvalidInputException
+import com.atlassian.jira.issue.Issue
+import com.atlassian.jira.issue.IssueManager
+import com.atlassian.jira.issue.fields.CustomField
+import com.atlassian.jira.component.ComponentAccessor
+import com.atlassian.jira.issue.CustomFieldManager
 
 def issueManager = ComponentAccessor.getIssueManager()
 def cfm = ComponentAccessor.customFieldManager
 def changeHistoryManager = ComponentAccessor.getChangeHistoryManager()
 def workflowManager = ComponentAccessor.getWorkflowManager()
-def issue = 'RELSTG-1466'
-//def issue = ComponentAccessor.getissueManager().getIssueByCurrentKey('RELSTG-1466')
+// def issue = 'RELSTG-1466'
+def issue = issueManager.getIssueByCurrentKey('RELSTG-1466')
 
 // Change these values to match the custom field names in your JIRA instance
 def territoryFieldName = cfm.getCustomFieldObject("customfield_20773")
