@@ -26,19 +26,10 @@ def targetStatus = "On hold"
 def sourceStatusToBlockOnHold = ["LIVE APPROVAL", "DEPLOYMENT APPROVAL", "SCHEDULED", "DEPLOYING", "RESOLVED"]
 
 
-// def isRelevantStatusChange = { changeItems ->
-//     changeItems?.any { it.toString() == targetStatus &&
-//                         (it.toString() == "Live Approval" ||
-//                          it.toString() == "Deployment Approval" ||
-//                          it.toString() == "Scheduled" ||
-//                          it.toString() == "Deploying" ||
-//                          it.toString() == "Resolved")
-//                     }
-// }
-
 def aLLonHoldIssues = []
 def projectId = issue.getProjectObject().getId()
 def projectIssues = issueManager.getIssueIdsForProject(projectId)
+def allblockingIssues = []
 if (projectIssues) {
     aLLonHoldIssues = issueManager.getIssueObjects(projectIssues)
       .findAll { it.getStatusObject().getName() == targetStatus }
@@ -71,10 +62,14 @@ aLLonHoldIssues.each { onHoldIssue ->
     def lastTransition = changeItems.last()
 
     if (sourceStatusToBlockOnHold.contains(lastTransition.fromString.toUpperCase())) {
-        log.warn("There is another ticket with the same custom fields is on hold: ${onHoldIssue.getKey()} after the ticket status was changed to Live Approval")
-        invalidInputException = new InvalidInputException("Another ticket with the same custom fields is on hold: ${onHoldIssue.getKey()} after the ticket status was changed to Live Approval")
-        throw invalidInputException
+        allblockingIssues.push(onHoldIssue.getKey())
     }
+}
+
+if (!allblockingIssues.isEmpty()) {
+    log.warn("There is another ticket with the same custom fields is on hold: ${allblockingIssues} after the ticket status was changed to Live Approval")
+    invalidInputException = new InvalidInputException("Another ticket with the same custom fields is on hold: ${allblockingIssues} after the ticket status was changed to Live Approval")
+    throw invalidInputException
 }
 
 "Ok"
