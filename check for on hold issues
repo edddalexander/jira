@@ -12,7 +12,8 @@ def issueManager = ComponentAccessor.getIssueManager()
 def cfm = ComponentAccessor.customFieldManager
 def changeHistoryManager = ComponentAccessor.getChangeHistoryManager()
 def workflowManager = ComponentAccessor.getWorkflowManager()
-// def issue = 'RELSTG-1466'
+
+//using custom issue key for testing, must be replaced before insert in the jira flow
 def issue = issueManager.getIssueByCurrentKey('RELSTG-1466')
 
 // Change these values to match the custom field names in your JIRA instance
@@ -22,47 +23,37 @@ def teamsFieldName = cfm.getCustomFieldObject("customfield_20772")
 def componentFieldValue = issue.getCustomFieldValue(componentFieldName)
 // Change this value to match the target status
 def targetStatus = "On hold"
+def sourceStatusToBlockOnHold = ["LIVE APPROVAL", "DEPLOYMENT APPROVAL", "SCHEDULED", "DEPLOYING", "RESOLVED"]
 
 
+// def isRelevantStatusChange = { changeItems ->
+//     changeItems?.any { it.toString() == targetStatus &&
+//                         (it.toString() == "Live Approval" ||
+//                          it.toString() == "Deployment Approval" ||
+//                          it.toString() == "Scheduled" ||
+//                          it.toString() == "Deploying" ||
+//                          it.toString() == "Resolved")
+//                     }
+// }
 
-def isRelevantStatusChange = { changeItems ->
-    changeItems?.any { it.toString() == targetStatus &&
-                        (it.toString() == "Live Approval" ||
-                         it.toString() == "Deployment Approval" ||
-                         it.toString() == "Scheduled" ||
-                         it.toString() == "Deploying" ||
-                         it.toString() == "Resolved")
-                    }
-}
-
-def ALLonHoldIssues = []
+def aLLonHoldIssues = []
 def projectId = issue.getProjectObject().getId()
 def projectIssues = issueManager.getIssueIdsForProject(projectId)
 if (projectIssues) {
-    ALLonHoldIssues = issueManager.getIssueObjects(projectIssues)
+    aLLonHoldIssues = issueManager.getIssueObjects(projectIssues)
       .findAll { it.getStatusObject().getName() == targetStatus }
 }
 
-def onHoldIssues = []
-def changeItems = changeHistoryManager.getChangeItemsForField(issue, "status")
-if (isRelevantStatusChange(changeItems)) {
-    onHoldIssues = issueManager.getIssueObjects(issueManager.getIssueIdsForProject(issue.getProjectObject().getId()).findAll { issueManager.getIssueObject(it)?.getStatusObject()?.getName() == targetStatus })
-}
-
 // Iterate over the on-hold issues and check if they match the current issue
-ALLonHoldIssues.each { onHoldIssue ->
+aLLonHoldIssues.each { onHoldIssue ->
     // Skip the current issue
     if (onHoldIssue.getKey() == issue.getKey()) {
         return
     }
-
-
     // Get the values of the custom fields for the current issue
     def territoryValue = getCustomFieldValue(issue, territoryFieldName)
     def componentValue = getCustomFieldValue(issue, componentFieldName)
     def teamsValue = getCustomFieldValue(issue, teamsFieldName)
-
-
 
     // Get the values of the custom fields for the other issue
     def otherTerritoryValue = getCustomFieldValue(onHoldIssue, territoryFieldName)
@@ -72,22 +63,21 @@ ALLonHoldIssues.each { onHoldIssue ->
     if (otherComponentValue != componentValue) {
         return
     }
-    //block if issue is ON Hold from selected status
-     //find the last transation of this on hold
-     //if is not in the status list
-     //skip
-     //def message = "DEBUG,changeHistoryManager= "+ changeHistoryManager
-        
-    // invalidInputException = new InvalidInputException(message)
-    //throw invalidInputException
 
-   // Check if the custom field values match
-    if (territoryValue == otherTerritoryValue && teamsValue == otherTeamsValue) {
+    if (territoryValue != otherTerritoryValue || teamsValue != otherTeamsValue) {
+        return;
+    }
+    def changeItems = changeHistoryManager.getChangeItemsForField(onHoldIssue, "status")
+    def lastTransition = changeItems.last()
+
+    if (sourceStatusToBlockOnHold.contains(lastTransition.fromString.toUpperCase())) {
         log.warn("There is another ticket with the same custom fields is on hold: ${onHoldIssue.getKey()} after the ticket status was changed to Live Approval")
         invalidInputException = new InvalidInputException("Another ticket with the same custom fields is on hold: ${onHoldIssue.getKey()} after the ticket status was changed to Live Approval")
         throw invalidInputException
     }
 }
+
+"Ok"
 
 // Helper method to get the value of a custom field for an issue
 def getCustomFieldValue(Issue issue, CustomField field) {
