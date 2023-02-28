@@ -1,0 +1,85 @@
+import com.atlassian.jira.issue.status.Status
+
+import com.atlassian.jira.issue.changehistory.ChangeHistoryManager
+import com.atlassian.jira.workflow.JiraWorkflow
+import com.opensymphony.workflow.InvalidInputException
+import com.atlassian.jira.issue.Issue
+import com.atlassian.jira.issue.IssueManager
+import com.atlassian.jira.issue.fields.CustomField
+import com.atlassian.jira.component.ComponentAccessor
+import com.atlassian.jira.issue.CustomFieldManager
+
+String myname = "Simon"
+
+Closure<String> sayHello = { String name ->
+      log.warn("Hello $name, my name is $myname")
+}
+
+println sayHello.call("James")
+sayHello()
+
+def names = ["Jeff", "Bob", "Indigo", "Kat", "123", "<html"]
+
+def result = names
+.findAll { it ==~ /[A-Z][a-z]+/}
+.collect {String name -> name.toUpperCase()}
+.sort { String a, String b -> a.length() <=> b.length() ?: a <=> b}
+
+result.eachWithIndex { String val, Integer idx ->
+     log.warn("$idx -> $val")
+ }
+
+//log.warn(result)
+
+def multiplier = {a, b -> a*b}
+
+def doubler = multiplier.curry(3)
+
+def quadrupler = doubler >> doubler
+
+log.warn(doubler(2))
+
+log.warn(quadrupler(10))
+
+def something(String value) {
+    return value.reverse()
+}
+
+Map m = [Amazon: "AWS"].withDefault(this.&something)
+//og.warn(m.Amazon)
+
+def str = "This is a short string"
+
+abstract class Cole {
+    abstract void Scholes()
+    abstract void Yorke()
+}
+
+Cole cole = [
+    Scholes: {
+    log.warn( "Goal")
+    }
+    ,
+    Yorke: {
+    log.warn("Offside")}
+ 
+] as Cole
+
+cole.Scholes()
+cole.Yorke()
+
+def sum = (0..20).inject(5) {acc, n -> acc + n}
+
+log.warn(sum)
+
+def new_closure = {
+    add(1)
+    add(2)
+}
+
+def new_list = []
+
+new_closure.delegate = new_list
+new_closure.resolveStrategy = Closure.DELEGATE_ONLY
+new_closure()
+log.warn(new_list)
